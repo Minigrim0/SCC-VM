@@ -1,0 +1,17 @@
+LI 0 0   ; r0 = 0
+LI 1 1   ; r1 = 1
+LI 2 0   ; r2 = 0
+LI 3 48  ; r3 = 48
+LI 4 44  ; r4 = 44
+LI 15 21 ; r15 = 21
+LR 5 0   ; r5 = r0
+AD 5 3   ; r5 = r5 + r3
+OP 5 0   ; print r5
+OP 4 0   ; print r4
+LR 5 0
+AD 5 1
+LR 0 1
+LR 1 5
+SU 5 15
+JN 5 6
+ST

@@ -1,0 +1,9 @@
+LI 0 1
+LI 1 1
+LR 2 0
+SU 2 1
+JN 2 8
+LI 4 'Y'
+OP 4 0
+JZ 2 8
+ST
