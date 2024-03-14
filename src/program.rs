@@ -1,7 +1,7 @@
-use std::fmt;
+use std::{fmt, slice::Iter};
 use crate::utils::read_bytes;
 
-enum InstructionsTypes {
+pub enum InstructionsTypes {
     CP = 0x0,
     LD = 0x1,
     ST = 0x2,
@@ -43,7 +43,7 @@ impl From<u8> for InstructionsTypes {
     }
 }
 
-struct Instruction {
+pub struct Instruction {
     pub instr: InstructionsTypes,
     pub opa: u8,
     pub opb: u8
@@ -121,6 +121,14 @@ impl Program {
         for (index, instr) in self.instructions.iter().enumerate() {
             println!("{:>3}| {}", index, instr);
         }
+    }
+
+    pub fn get_instruction(&self, index: usize) -> Option<&Instruction> {
+        self.instructions.get(index)
+    }
+
+    pub fn get_data(&self, index: usize) -> Option<&u8> {
+        self.data.get(index)
     }
 }
 
