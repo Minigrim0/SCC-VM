@@ -98,7 +98,6 @@ impl Program {
 
         for (index, instruction) in instruction_data.iter().enumerate() {
             if index > last_ff {
-                data.push(instruction.0);
                 data.push(instruction.1);
                 continue;
             }
