@@ -1,3 +1,6 @@
+use std::io;
+use std::io::Write;
+
 use std::fmt;
 use crate::program::{InstructionsTypes, Program};
 
@@ -6,7 +9,8 @@ pub struct Machine {
     reg: [u8; 16],
     ram: [u8; 256],
     output: String,
-    pc: u32
+    pc: u8,
+    completed: bool
 }
 
 impl Machine {
@@ -16,8 +20,13 @@ impl Machine {
             reg: [0; 16],
             ram: [0; 256],
             output: String::new(),
-            pc: 0
+            pc: 0,
+            completed: false,
         }
+    }
+
+    pub fn get_output(&self) -> &String {
+        &self.output
     }
 
     pub fn load(&mut self, program: Program) -> () {
@@ -25,17 +34,21 @@ impl Machine {
     }
 
     pub fn run(&mut self) -> Result<(), String> {
-        'execution_loop: loop {
-            if let Err(e) = self.step() {
-                println!("{}", e.to_string());
-                break 'execution_loop
+        let res = loop {
+            if self.completed {
+                break Ok(())
             }
+            self.step()?;
             print!("{}", self);
-        }
-        Ok(())
+            if let Err(e) = io::stdout().flush() {
+                println!("[x] err: {}", e.to_string());
+            }
+        };
+        println!();
+        res
     }
 
-    pub fn step(&mut self) -> Result<(), String> {
+    pub fn step(&mut self) -> Result<bool, String> {
         let program = match &self.program {
             Some(p) => p,
             None => return Err("No program is loaded in memory".to_string())
@@ -48,8 +61,8 @@ impl Machine {
 
         self.pc = match ins.instr {
             InstructionsTypes::CP => {
-                for offset in 1..ins.opb {
-                    self.ram[offset as usize] = match program.get_data(offset as usize) {
+                for offset in 0..ins.opb {
+                    self.ram[offset as usize] = match program.get_data((self.reg[ins.opa as usize] + offset) as usize) {
                         Some(v) => *v,
                         None => {
                             println!("Unable to read data from program at index {}, defaulting to 0x0", offset);
@@ -76,16 +89,15 @@ impl Machine {
                 self.pc + 1
             },
             InstructionsTypes::JZ => {
-                if self.reg[ins.opa as usize] == 0b10000001 {
-                    ins.opb as u32
+                if self.reg[ins.opa as usize] == 0 {
+                    ins.opb
                 } else {
                     self.pc + 1
                 }
             },
             InstructionsTypes::JN => {
-                if (self.reg[ins.opa as usize] & 0b01111111) != 0 {
-                    print!("\033[1;0H moving to {}", ins.opb);
-                    ins.opb as u32
+                if self.reg[ins.opa as usize] != 0 {
+                    ins.opb
                 } else {
                     self.pc + 1
                 }
@@ -94,7 +106,7 @@ impl Machine {
                 if ins.opb == 0 {
                     self.output.push(self.reg[ins.opa as usize] as char);
                 } else {
-                    for index in ins.opa..(ins.opa + ins.opb) {
+                    for index in self.reg[ins.opa as usize]..(self.reg[ins.opa as usize] + ins.opb) {
                         self.output.push(self.ram[index as usize] as char)
                     }
                 }
@@ -102,7 +114,7 @@ impl Machine {
                 self.pc + 1
             },
             InstructionsTypes::AD => {
-                self.reg[ins.opa as usize] = ((self.reg[ins.opa as usize] as u16 + self.reg[ins.opb as usize] as u16) % 0xff) as u8;
+                self.reg[ins.opa as usize] = ((self.reg[ins.opa as usize] as u16 + self.reg[ins.opb as usize] as u16) & 0xff) as u8;
                 self.pc + 1
             },
             InstructionsTypes::SU => {
@@ -117,23 +129,29 @@ impl Machine {
                 self.pc + 1
             },
             InstructionsTypes::SL => {
-                self.reg[ins.opa as usize] = (self.reg[ins.opa as usize] << self.reg[ins.opa as usize]) & 0xff;
+                self.reg[ins.opa as usize] = (self.reg[ins.opa as usize] << self.reg[ins.opb as usize]) & 0xff;
                 self.pc + 1
             },
             InstructionsTypes::XR => {
-                self.reg[ins.opa as usize] = self.reg[ins.opa as usize] ^ self.reg[ins.opb as usize];
+                self.reg[ins.opa as usize] = (self.reg[ins.opa as usize] ^ self.reg[ins.opb as usize]) & 0xff;
+                self.pc + 1
+            },
+            InstructionsTypes::ND => {
+                self.reg[ins.opa as usize] = (self.reg[ins.opa as usize] & self.reg[ins.opb as usize]) & 0xff;
                 self.pc + 1
             },
             InstructionsTypes::SR => {
-                self.reg[ins.opa as usize] = (self.reg[ins.opa as usize] >> self.reg[ins.opa as usize]) & 0xff;
+                if ins.opb == 0xff {
+                    self.completed = true;
+                    return Ok(true)
+                }
+
+                self.reg[ins.opa as usize] = (self.reg[ins.opa as usize] >> self.reg[ins.opb as usize]) & 0xff;
                 self.pc + 1
-            },
-            InstructionsTypes::HL => {
-                panic!("stop");
             },
         };
 
-        Ok(())
+        Ok(false)
     }
 }
 

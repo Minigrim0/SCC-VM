@@ -1,4 +1,4 @@
-use std::{fmt, slice::Iter};
+use std::fmt;
 use crate::utils::read_bytes;
 
 pub enum InstructionsTypes {
@@ -16,8 +16,8 @@ pub enum InstructionsTypes {
     MU = 0xb,
     SL = 0xc,
     XR = 0xd,
-    SR = 0xe,
-    HL = 0xf,
+    ND = 0xe,
+    SR = 0xf,
 }
 
 impl From<u8> for InstructionsTypes {
@@ -36,8 +36,8 @@ impl From<u8> for InstructionsTypes {
             0xb => InstructionsTypes::MU,
             0xc => InstructionsTypes::SL,
             0xd => InstructionsTypes::XR,
-            0xe => InstructionsTypes::SR,
-            0xf => InstructionsTypes::HL,
+            0xe => InstructionsTypes::ND,
+            0xf => InstructionsTypes::SR,
             _ => panic!("Invalid instruction value"),
         }
     }
@@ -65,8 +65,8 @@ impl fmt::Display for Instruction {
             InstructionsTypes::MU => "MU",
             InstructionsTypes::SL => "SL",
             InstructionsTypes::XR => "XR",
+            InstructionsTypes::ND => "ND",
             InstructionsTypes::SR => "SR",
-            InstructionsTypes::HL => "HL",
         };
         write!(f, "{} {:>3}, {:>3}", instr_dis, self.opa, self.opb)
     }
@@ -115,19 +115,12 @@ impl Program {
         }
     }
 
-    pub fn expand(&self) -> () {
-        println!("  #| INS  A,   B");
-        for (index, instr) in self.instructions.iter().enumerate() {
-            println!("{:>3}| {}", index, instr);
-        }
-    }
-
     pub fn get_instruction(&self, index: usize) -> Option<&Instruction> {
         self.instructions.get(index)
     }
 
     pub fn get_data(&self, index: usize) -> Option<&u8> {
-        self.data.get(index)
+        self.data.get(index - self.instructions.len())
     }
 }
 
